@@ -1,0 +1,5 @@
+{
+    "appService.preDeployTask": "publish-release",
+    "appService.deploySubpath": "bin\\Release\\net10.0\\publish",
+    "appService.defaultWebAppToDeploy": "/subscriptions/3135b08e-0db8-430d-8549-1fd159c92f65/resourceGroups/bots/providers/Microsoft.Web/sites/botgalsoft"
+}

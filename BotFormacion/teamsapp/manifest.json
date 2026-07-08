@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "8c6dfa27-513c-42ae-8886-9cbbb6200310",
+  "packageName": "es.galsoft.bot",
+  "developer": {
+    "name": "Galsoft",
+    "websiteUrl": "https://galsoft.es",
+    "privacyUrl": "https://galsoft.es/privacy",
+    "termsOfUseUrl": "https://galsoft.es/terms"
+  },
+  "name": {
+    "short": "galsoft-bot",
+    "full": "Bot de formación Galsoft"
+  },
+  "description": {
+    "short": "Bot de formación interna",
+    "full": "Bot de formación y quizzes para empleados de Galsoft"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "8c6dfa27-513c-42ae-8886-9cbbb6200310",
+      "scopes": ["personal", "team", "groupchat"],
+      "isNotificationOnly": false,
+      "supportsCalling": false,
+      "supportsVideo": false,
+      "supportsFiles": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"]
+}
