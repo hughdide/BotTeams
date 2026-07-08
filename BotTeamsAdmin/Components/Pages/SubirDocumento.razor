@@ -1,0 +1,90 @@
+﻿@page "/subir"
+@attribute [Authorize]
+@inject IConfiguration Configuration
+@inject IHttpClientFactory HttpClientFactory
+
+<h3>Subir Documento</h3>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @claseAlerta">@mensaje</div>
+}
+
+<InputFile OnChange="SeleccionarFichero" accept=".pdf" />
+
+@if (fichero != null)
+{
+    <p>Fichero seleccionado: <strong>@fichero.Name</strong> (@((fichero.Size / 1024).ToString()) KB)</p>
+    <button class="btn btn-primary" @onclick="SubirFichero" disabled="@subiendo">
+        @if (subiendo)
+        {
+            <span>Subiendo...</span>
+        }
+        else
+        {
+            <span>Subir</span>
+        }
+    </button>
+}
+
+@code {
+    private IBrowserFile? fichero;
+    private string mensaje = "";
+    private string claseAlerta = "";
+    private bool subiendo = false;
+
+    private void SeleccionarFichero(InputFileChangeEventArgs e)
+    {
+        fichero = e.File;
+        mensaje = "";
+    }
+
+    private async Task SubirFichero()
+    {
+        if (fichero == null) return;
+
+        subiendo = true;
+        mensaje = "";
+
+        try
+        {
+            var apiKey = Configuration["Rag:ApiKey"];
+            var url = $"{Configuration["Rag:Url"]}/documentos";
+
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("x-api-key", apiKey);
+
+            using var content = new MultipartFormDataContent();
+            using var stream = fichero.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024); // 50MB max
+            using var streamContent = new StreamContent(stream);
+
+            streamContent.Headers.ContentType =
+                new System.Net.Http.Headers.MediaTypeHeaderValue(fichero.ContentType);
+
+            content.Add(streamContent, "file", fichero.Name);
+
+            var response = await client.PostAsync(url, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensaje = "Fichero subido correctamente";
+                claseAlerta = "alert-success";
+                fichero = null;
+            }
+            else
+            {
+                mensaje = $"Error: {response.StatusCode}";
+                claseAlerta = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error: {ex.Message}";
+            claseAlerta = "alert-danger";
+        }
+        finally
+        {
+            subiendo = false;
+        }
+    }
+}

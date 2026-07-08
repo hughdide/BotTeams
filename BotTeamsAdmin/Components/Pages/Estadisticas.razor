@@ -1,0 +1,81 @@
+﻿@page "/estadisticas"
+@attribute [Authorize]
+@inject IConfiguration Configuration
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@using System.Text.Json
+
+<h3>Estadísticas</h3>
+
+<button class="btn btn-primary mb-3" @onclick='() => Navigation.NavigateTo("/enviar-pregunta")'>
+    + Enviar nueva pregunta
+</button>
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (empleados.Count == 0)
+{
+    <p>No hay datos disponibles.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Empleado</th>
+                <th>Total</th>
+                <th>Correctas</th>
+                <th>Parciales</th>
+                <th>Incorrectas</th>
+                <th>% Acierto</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in empleados)
+            {
+                <tr>
+                    <td>@emp.nombre</td>
+                    <td>@emp.total</td>
+                    <td class="text-success">@emp.correctas</td>
+                    <td class="text-warning">@emp.parciales</td>
+                    <td class="text-danger">@emp.incorrectas</td>
+                    <td>@emp.porcentaje.ToString("0.#")%</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Empleado> empleados = new();
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("x-api-key", Configuration["Rag:ApiKey"]);
+
+            var url = $"{Configuration["Rag:Url"]}/estadisticas";
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var datos = JsonSerializer.Deserialize<EstadisticasResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                empleados = datos?.empleados ?? new();
+            }
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    record EstadisticasResponse(List<Empleado> empleados);
+    record Empleado(string nombre, int total, int correctas, int parciales, int incorrectas, double porcentaje);
+}

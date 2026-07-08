@@ -1,0 +1,135 @@
+﻿@layout EmptyLayout
+@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using BotTeamsAdmin.Components.Layout
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using BotTeamsAdmin.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Acceso</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-xl-10 col-lg-12 col-md-9">
+            <div class="card o-hidden border-0 shadow-lg my-5">
+                <div class="card-body p-0">
+                    <div class="row">
+                        <div class="col-lg-6 d-none d-lg-block bg-login-image">
+                            <img src="logobot.jpg" />
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="p-5">
+                                <div class="text-center">
+                                    <h1 class="h4 text-gray-900 mb-4">Bot Formación Galsoft</h1>
+                                </div>
+                                <section>
+                                        <StatusMessage Message="@errorMessage" />
+                                        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                                            <DataAnnotationsValidator />
+
+                                            <ValidationSummary class="text-danger" role="alert" />
+
+                                            <div class="form-group">
+                                                <InputText @bind-Value="Input.Email" class="form-control form-control-user" autocomplete="username" aria-required="true" placeholder="Introduzca su email" />
+                                                <ValidationMessage For="() => Input.Email" class="text-danger" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <InputText type="password" @bind-Value="Input.Password" class="form-control form-control-user" autocomplete="current-password" aria-required="true" placeholder="Introduzca su contraseña" />
+                                                <ValidationMessage For="() => Input.Password" class="text-danger" />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <div class="custom-control custom-checkbox small">
+                                                    <InputCheckbox @bind-Value="Input.RememberMe" class="custom-control-input" />
+                                                    <label class="custom-control-label">                                                     
+                                                        Recordarme
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <button type="submit" class="btn btn-primary btn-user btn-block">Acceder</button>
+                                            </div>
+                                            <hr>
+                                            <div class="text-center">
+                                                <a class="small" href="Account/ForgotPassword">Recordar contraseña</a>
+                                            </div>
+                                        </EditForm>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        // This doesn't count login failures towards account lockout
+        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Acceso no válido.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+}

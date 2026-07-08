@@ -1,0 +1,38 @@
+﻿@page "/"
+@attribute [Authorize]
+
+<PageTitle>Home</PageTitle>
+
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1>Portal de Administración</h1>
+        <p class="lead text-muted">Bot de Formación · Galsoft</p>
+        <hr />
+    </div>
+
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Documentos</h5>
+                    <p class="card-text text-muted">
+                        Consulta y gestiona los documentos incluidos en la base de conocimiento del bot.
+                    </p>
+                    <a href="/documentos" class="btn btn-primary">Ver documentos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Estadísticas</h5>
+                    <p class="card-text text-muted">
+                        Consulta el rendimiento de los empleados en la formación o genera nuevas preguntas.
+                    </p>
+                    <a href="/estadisticas" class="btn btn-primary">Ver estadísticas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,84 @@
+﻿@page "/enviar-pregunta"
+@attribute [Authorize]
+@inject IConfiguration Configuration
+@inject IHttpClientFactory HttpClientFactory
+@using System.Text.Json
+@using System.Text
+
+<h3>Enviar nueva pregunta</h3>
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @claseAlerta">@mensaje</div>
+}
+
+<div class="mb-3" style="max-width: 400px;">
+    <label class="form-label">Tema <span class="text-muted">(opcional)</span></label>
+    <input class="form-control" @bind="tema" placeholder="Deje sin cubrir si desea que sea aleatorio" />
+</div>
+
+<button class="btn btn-primary" @onclick="Enviar" disabled="@enviando">
+    @if (enviando)
+    {
+        <span>Enviando...</span>
+    }
+    else
+    {
+        <span>Enviar pregunta</span>
+    }
+</button>
+
+@code {
+    private string tema = "";
+    private string mensaje = "";
+    private string claseAlerta = "";
+    private bool enviando = false;
+
+    private async Task Enviar()
+    {
+        enviando = true;
+        mensaje = "";
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("x-admin-key", Configuration["Bot:AdminKey"]);
+
+            HttpContent content;
+
+            if (string.IsNullOrWhiteSpace(tema))
+            {
+                content = new StringContent("{}", Encoding.UTF8, "application/json");
+            }
+            else
+            {
+                var body = JsonSerializer.Serialize(new { tema });
+                content = new StringContent(body, Encoding.UTF8, "application/json");
+            }
+
+            var url = $"{Configuration["Bot:Url"]}/admin/send-quiz";
+            var response = await client.PostAsync(url, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                mensaje = "Pregunta enviada correctamente";
+                claseAlerta = "alert-success";
+                tema = "";
+            }
+            else
+            {
+                mensaje = $"Error: {response.StatusCode}";
+                claseAlerta = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error: {ex.Message}";
+            claseAlerta = "alert-danger";
+        }
+        finally
+        {
+            enviando = false;
+        }
+    }
+}

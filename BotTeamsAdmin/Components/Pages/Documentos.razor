@@ -1,0 +1,134 @@
+﻿@page "/documentos"
+@attribute [Authorize]
+@inject IConfiguration Configuration
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@using System.Text.Json
+@using BotTeamsAdmin.Components.Model
+
+<h3>Documentos</h3>
+
+<button class="btn btn-primary mb-3" @onclick='() => Navigation.NavigateTo("/subir")'>
+    + Nuevo documento
+</button>
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else if (documentos.Count == 0)
+{
+    <p>No hay documentos subidos.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Fecha</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var doc in documentos)
+            {
+                <tr>
+                    <td>@doc.Nombre</td>
+                    <td>@doc.FechaSubida</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => DescargarDocumento(doc.Nombre)">
+                            Descargar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(mensaje))
+{
+    <div class="alert @claseAlerta">@mensaje</div>
+}
+
+@code {
+    private List<Documento> documentos = new();
+    private bool cargando = true;
+    private string mensaje = "";
+    private string claseAlerta = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDocumentos();
+    }
+
+    private async Task CargarDocumentos()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("x-api-key", Configuration["Rag:ApiKey"]);
+
+            var url = $"{Configuration["Rag:Url"]}/documentos";
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+
+                documentos = JsonSerializer.Deserialize<List<Documento>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new();
+            }
+            else
+            {
+                mensaje = $"Error al cargar documentos: {response.StatusCode}";
+                claseAlerta = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error: {ex.Message}";
+            claseAlerta = "alert-danger";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task DescargarDocumento(string nombre)
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("x-api-key", Configuration["Rag:ApiKey"]);
+
+            var baseUrl = $"{Configuration["Rag:Url"]}/documentos";
+            var response = await client.GetAsync($"{baseUrl}/{nombre}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(bytes);
+                var mimeType = nombre.EndsWith(".pdf") ? "application/pdf" : "text/plain";
+                // Trigger descarga via JS
+                await JS.InvokeVoidAsync("downloadFile", nombre, mimeType, base64);
+            }
+            else
+            {
+                mensaje = $"Error al descargar: {response.StatusCode}";
+                claseAlerta = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensaje = $"Error: {ex.Message}";
+            claseAlerta = "alert-danger";
+        }
+    }
+}
