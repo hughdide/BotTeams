@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "9500:8000"
+    environment:
+      - API_KEY=${API_KEY:-changeme}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=botformacion
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    volumes:
+      - documents_data:/app/storage/documents
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: botformacion
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "9502:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/00_create_databases.sh:/docker-entrypoint-initdb.d/00_create_databases.sh
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "9501:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+volumes:
+  postgres_data:
+  chroma_data:
+  documents_data:
